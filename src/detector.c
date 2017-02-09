@@ -438,6 +438,78 @@ void validate_detector_recall(char *cfgfile, char *weightfile)
     }
 }
 
+void test_detector_subroutine(char * input, char ** names, image ** alphabet, network net, float nms, float thresh, float hier_thresh)
+{
+    printf("%s", input);
+    int j;
+    clock_t time;
+    time=clock();
+
+    // strncpy(input, filename, 256);
+    image im = load_image_color(input,0,0);
+    image sized = resize_image(im, net.w, net.h);
+    layer l = net.layers[net.n-1];
+
+    box *boxes = calloc(l.w*l.h*l.n, sizeof(box));
+    float **probs = calloc(l.w*l.h*l.n, sizeof(float *));
+    for(j = 0; j < l.w*l.h*l.n; ++j) probs[j] = calloc(l.classes + 1, sizeof(float *));
+
+    float *X = sized.data;
+    network_predict(net, X);
+    // printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+    get_region_boxes(l, 1, 1, thresh, probs, boxes, 0, 0, hier_thresh);
+    if (l.softmax_tree && nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
+    else if (nms) do_nms_sort(boxes, probs, l.w*l.h*l.n, l.classes, nms);
+    draw_detections(im, l.w*l.h*l.n, thresh, boxes, probs, names, alphabet, l.classes);
+    
+    // save_image(im, "predictions");
+    // show_image(im, "predictions");
+
+    free(boxes);
+    free_ptrs((void **)probs, l.w*l.h*l.n);
+    free_image(sized);
+    free_image(im);
+    printf(",%f\n", sec(clock()-time));
+
+}
+
+void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh, float hier_thresh)
+{
+    clock_t time;
+
+    time = clock();
+    list *options = read_data_cfg(datacfg);
+    char *name_list = option_find_str(options, "names", "data/names.list");
+    char **names = get_labels(name_list);
+
+    image **alphabet = load_alphabet();
+    network net = parse_network_cfg(cfgfile);
+    if(weightfile){
+        load_weights(&net, weightfile);
+    }
+    set_batch_network(&net, 1);
+    srand(2222222);
+    char buff[1000];
+    char *input = buff;
+    float nms=.4;
+
+    printf("Prep work in %f seconds.\n", sec(clock()-time));
+    time = clock();
+    int cntr = 0;
+    FILE *ptr_file = fopen(filename, "r");
+    if (ptr_file) {
+        while (fgets(buff,1000, ptr_file) != NULL) {
+            buff[strcspn(buff, "\n")] = 0;
+            test_detector_subroutine(buff, names, alphabet, net, nms, thresh, hier_thresh);
+            cntr++;
+        }
+    }
+    printf("Total detection time for %d images = %f seconds, %f seconds/image.\n", cntr, sec(clock()-time), sec(clock()-time) / (float)cntr);
+
+    fclose(ptr_file);
+}
+
+/*
 void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh, float hier_thresh)
 {
     list *options = read_data_cfg(datacfg);
@@ -477,13 +549,15 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         float *X = sized.data;
         time=clock();
         network_predict(net, X);
-        printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+        // printf("%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+        printf("%s,%f", input, sec(clock()-time));
         get_region_boxes(l, 1, 1, thresh, probs, boxes, 0, 0, hier_thresh);
         if (l.softmax_tree && nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
         else if (nms) do_nms_sort(boxes, probs, l.w*l.h*l.n, l.classes, nms);
         draw_detections(im, l.w*l.h*l.n, thresh, boxes, probs, names, alphabet, l.classes);
+        
         save_image(im, "predictions");
-        show_image(im, "predictions");
+        // show_image(im, "predictions");
 
         free_image(im);
         free_image(sized);
@@ -495,7 +569,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
 #endif
         if (filename) break;
     }
-}
+}*/
 
 void run_detector(int argc, char **argv)
 {

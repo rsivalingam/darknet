@@ -186,25 +186,24 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
         float prob = probs[i][class];
         if(prob > thresh){
 
-            int width = im.h * .012;
+            // int width = im.h * .012;
 
-            if(0){
-                width = pow(prob, 1./2.)*10+1;
-                alphabet = 0;
-            }
+            // if(0){
+            //     width = pow(prob, 1./2.)*10+1;
+            //     alphabet = 0;
+            // }
 
-            printf("%s: %.0f%%\n", names[class], prob*100);
-            int offset = class*123457 % classes;
-            float red = get_color(2,offset,classes);
-            float green = get_color(1,offset,classes);
-            float blue = get_color(0,offset,classes);
-            float rgb[3];
+            // int offset = class*123457 % classes;
+            // float red = get_color(2,offset,classes);
+            // float green = get_color(1,offset,classes);
+            // float blue = get_color(0,offset,classes);
+            // float rgb[3];
 
-            //width = prob*20+2;
+            // //width = prob*20+2;
 
-            rgb[0] = red;
-            rgb[1] = green;
-            rgb[2] = blue;
+            // rgb[0] = red;
+            // rgb[1] = green;
+            // rgb[2] = blue;
             box b = boxes[i];
 
             int left  = (b.x-b.w/2.)*im.w;
@@ -217,11 +216,13 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
-            draw_box_width(im, left, top, right, bot, width, red, green, blue);
-            if (alphabet) {
-                image label = get_label(alphabet, names[class], (im.h*.03)/10);
-                draw_label(im, top + width, left, label, rgb);
-            }
+            printf(",%s,%.4f,%d,%d,%d,%d", names[class], prob, left, top, right, bot);
+
+            // draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            // if (alphabet) {
+            //     image label = get_label(alphabet, names[class], (im.h*.03)/10);
+            //     draw_label(im, top + width, left, label, rgb);
+            // }
         }
     }
 }
